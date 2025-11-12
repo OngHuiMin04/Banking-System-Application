@@ -32,14 +32,14 @@ void displayMenu() {
     printf("\n=== HM BANKING SYSTEM ===\n");
     printf("------------------------------------------------------------\n\n");
     printf("            -- Main Menu --\n\n");
-    printf("1. Create New Account\n");
-    printf("2. Login to Account\n");
-    printf("3. Deposit Money\n");
-    printf("4. Withdraw Money\n");
-    printf("5. Remittance\n");
-    printf("6. Delete Account\n");
-    printf("7. Logout\n");
-    printf("8. Exit System\n");
+    printf("1. Create New Account (or type 'create')\n");
+    printf("2. Login to Account (or type 'login')\n");
+    printf("3. Deposit Money (or type 'deposit')\n");
+    printf("4. Withdraw Money (or type 'withdraw')\n");
+    printf("5. Remittance (or type 'remittance')\n");
+    printf("6. Delete Account (or type 'delete')\n");
+    printf("7. Logout (or type 'logout')\n");
+    printf("8. Exit System (or type 'exit')\n");
     printf("\n------------------------------------------------------------\n");
     printf("Choose option (1-8): ");
 }
@@ -99,5 +99,27 @@ void runBankingSystem() {
                 printf("Invalid option.\n");
                 break;
         }
+    }
+}
+
+    void getCurrentDateTime(char *buffer, int size) {
+    time_t rawtime;
+    struct tm *timeinfo;
+    
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    
+    strftime(buffer, size, "%Y-%m-%d %H:%M:%S", timeinfo);
+    }
+
+    void logTransaction(const char *from, const char *to, double amount, const char *type) {
+    FILE *file = fopen("database/transaction.log", "a");
+    if (file != NULL) {
+        char timestamp[50];
+        getCurrentDateTime(timestamp, sizeof(timestamp));
+        
+        fprintf(file, "[%s] %s: From=%s, To=%s, Amount=%.2f\n", 
+                timestamp, type, from, to, amount);
+        fclose(file);
     }
 }
