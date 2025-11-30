@@ -1,63 +1,95 @@
-#include <stdio.h>
-#include <stdlib.h> 
-#include <stdint.h> 
-#include <stdbool.h> 
-#include <string.h> 
-#include <ctype.h> 
-#include <time.h> 
-#include <errno.h> 
-#include <limits.h>
+#include "delete_acc.h"
 
-bool deleteBankAccount() {
+bool deleteBankAccount(void) {
     printf("\n=== Delete Bank Account ===\n");
-    
-    if (!isLoggedIn) {
-        printf("You need to login first to delete an account.\n");
-        if (!loginToAccount()) {
-            printf("Account deletion cancelled.\n");
-            return false;
-        }
+
+    // Load all accounts
+    char accounts[100][ACCOUNT_NUM_LEN];
+    int count = loadAllAccounts(accounts);
+    if (count == 0) {
+        printf("No accounts available.\n");
+        return false;
     }
-    
-    char targetAccount[10];
-    strcpy(targetAccount, currentUser.accountNumber);
-    
-    // Additional verification
-    char lastFourID[5];
-    strncpy(lastFourID, currentUser.id + strlen(currentUser.id) - 4, 4);
-    lastFourID[4] = '\0';
-    
-    char inputLastFour[5];
-    printf("Enter last 4 characters of ID for verification: ");
-    if (scanf("%4s", inputLastFour) != 1) return false;
-    
+
+    // Display accounts
+    printf("\nExisting Accounts:\n");
+    for (int i = 0; i < count; i++) {
+        printf("%d. %s\n", i + 1, accounts[i]);
+    }
+
+    // Select account
+    char choiceStr[16];
+    int choice;
+    while (1) {
+        printf("Select account number to delete (1-%d): ", count);
+        if (!readLine(choiceStr, sizeof(choiceStr))) return false;
+        if (!isPositiveNumber(choiceStr)) continue;
+        choice = atoi(choiceStr);
+        if (choice >= 1 && choice <= count) break;
+        printf("Invalid selection.\n");
+    }
+
+    // Target
+    char targetAccount[ACCOUNT_NUM_LEN];
+    strcpy(targetAccount, accounts[choice - 1]);
+
+    // Re-enter confirmation
+    char confirmAcc[ACCOUNT_NUM_LEN];
+    printf("Re-enter the account number to confirm: ");
+    if (!readLine(confirmAcc, sizeof(confirmAcc))) return false;
+    if (strcmp(confirmAcc, targetAccount) != 0) {
+        printf("Account number mismatch. Cancelled.\n");
+        return false;
+    }
+
+    // Load account file
+    BankAccount acc;
+    if (!loadAccount(targetAccount, &acc)) {
+        printf("Failed to load account file.\n");
+        return false;
+    }
+
+    // Verify last 4 ID
+    char last4[5];
+    size_t len = strlen(acc.id);
+    strncpy(last4, acc.id + len - 4, 4);
+    last4[4] = '\0';
+
+    char inputLast4[5];
+    printf("Enter last 4 characters of ID: ");
+    if (!readLine(inputLast4, sizeof(inputLast4))) return false;
+
+    // PIN check
     char pin[PIN_LENGTH];
     printf("Enter 4-digit PIN to confirm deletion: ");
-    if (scanf("%4s", pin) != 1) return false;
-    
-    if (strcmp(currentUser.pin, pin) != 0 || strcmp(lastFourID, inputLastFour) != 0) {
-        printf("Authentication failed! Account deletion cancelled.\n");
+    if (!readLine(pin, sizeof(pin)) || !validatePIN(pin)) {
+        printf("Invalid PIN.\n");
         return false;
     }
-    
-    // Confirm deletion
-    char confirm;
-    printf("Are you sure you want to delete account %s? This action cannot be undone! (y/n): ", targetAccount);
-    clearInputBuffer();
-    scanf("%c", &confirm);
-    
-    if (confirm == 'y' || confirm == 'Y') {
-        if (deleteAccountFile(targetAccount)) {
-            printf("Account deleted successfully!\n");
-            logTransaction("DELETE_ACCOUNT", targetAccount, 0.0, NULL);
-            logoutAccount();
-            return true;
-        } else {
-            printf("Failed to delete account.\n");
-            return false;
-        }
-    } else {
-        printf("Deletion cancelled.\n");
+
+    if (strcmp(pin, acc.pin) != 0 || strcmp(inputLast4, last4) != 0) {
+        printf("Authentication failed.\n");
         return false;
     }
+
+    // Final confirmation
+    printf("Are you sure you want to delete account %s? (y/n): ", targetAccount);
+    if (!readLine(choiceStr, sizeof(choiceStr))) return false;
+    if (choiceStr[0] != 'y' && choiceStr[0] != 'Y') {
+        printf("Cancelled.\n");
+        return false;
+    }
+
+    // Delete account file
+    char path[128];
+    snprintf(path, sizeof(path), "%s/%s.txt", DATABASE_DIR, targetAccount);
+    remove(path);
+
+    // Remove from index
+    removeFromIndexFile(targetAccount);
+
+    printf("Account deleted successfully.\n");
+    logTransaction("DELETE_ACCOUNT", targetAccount, 0.0, "");
+
+    return true;
 }

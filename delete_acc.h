@@ -1,8 +1,8 @@
 #ifndef DELETE_ACCOUNT_H
 #define DELETE_ACCOUNT_H
 
-#include <stdbool.h>
+#include "common.h"
 
-bool deleteBankAccount();
+bool deleteBankAccount(void);
 
 #endif
