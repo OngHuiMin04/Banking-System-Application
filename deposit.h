@@ -1,8 +1,8 @@
 #ifndef DEPOSIT_H
 #define DEPOSIT_H
 
-#include <stdbool.h>
+#include "common.h"
 
-bool depositMoney();
+bool depositMoney(void);
 
 #endif
