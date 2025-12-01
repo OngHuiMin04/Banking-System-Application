@@ -1,8 +1,8 @@
 #ifndef REMITTANCE_H
 #define REMITTANCE_H
 
-#include <stdbool.h>
+#include "common.h"
 
-bool remitMoney();
+bool remitMoney(void);
 
 #endif

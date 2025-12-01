@@ -1,107 +1,121 @@
-#include <stdio.h>
-#include <stdlib.h> 
-#include <stdint.h> 
-#include <stdbool.h> 
-#include <string.h> 
-#include <ctype.h> 
-#include <time.h> 
-#include <errno.h> 
-#include <limits.h>
+#include "remittance.h"
 
-bool remitMoney() {
+bool remitMoney(void) {
     printf("\n=== Transfer / Remittance ===\n");
-    
-    if (!isLoggedIn) {
-        printf("You need to login first to make a transfer.\n");
-        if (!loginToAccount()) {
-            printf("Transfer cancelled.\n");
-            return false;
-        }
-    }
-    
-    char receiverAccount[10], pin[PIN_LENGTH];
+
+    char senderAccNum[ACCOUNT_NUM_LEN];
+    char receiverAccNum[ACCOUNT_NUM_LEN];
+    char pin[PIN_LENGTH];
+    char amountStr[32];
     double amount, fee = 0.0;
-    
-    printf("Transferring from account: %s\n", currentUser.accountNumber);
-    printf("Current balance: RM %.2lf\n", currentUser.balance);
-    
-    printf("Enter 4-digit PIN to confirm: ");
-    if (scanf("%4s", pin) != 1) return false;
-    
-    if (strcmp(currentUser.pin, pin) != 0) {
-        printf("Invalid PIN! Transaction cancelled.\n");
+
+    // Sender account number
+    printf("Enter sender account number: ");
+    if (!readLine(senderAccNum, sizeof(senderAccNum))) return false;
+
+    // PIN
+    printf("Enter 4-digit PIN: ");
+    if (!readLine(pin, sizeof(pin)) || !validatePIN(pin)) {
+        printf("Invalid PIN.\n");
         return false;
     }
-    
-    printf("Enter recipient account number: ");
-    if (scanf("%9s", receiverAccount) != 1) return false;
-    
-    if (strcmp(currentUser.accountNumber, receiverAccount) == 0) {
-        printf("Cannot transfer to the same account!\n");
+
+    // Load sender account
+    BankAccount sender;
+    if (!loadAccount(senderAccNum, &sender)) {
+        printf("Sender account not found.\n");
         return false;
     }
-    
+
+    if (strcmp(sender.pin, pin) != 0) {
+        printf("Incorrect PIN.\n");
+        return false;
+    }
+
+    printf("Sender balance: RM %.2f\n", sender.balance);
+
+    // Receiver account
+    printf("Enter receiver account number: ");
+    if (!readLine(receiverAccNum, sizeof(receiverAccNum))) return false;
+
+    if (strcmp(senderAccNum, receiverAccNum) == 0) {
+        printf("Cannot transfer to the same account.\n");
+        return false;
+    }
+
     BankAccount receiver;
-    if (!loadAccount(receiverAccount, &receiver)) {
-        printf("Recipient account not found!\n");
+    if (!loadAccount(receiverAccNum, &receiver)) {
+        printf("Receiver account not found.\n");
         return false;
     }
-    
-    // Get transfer amount
-    char amountStr[20];
-    do {
-        printf("Enter amount to transfer: ");
-        if (scanf("%19s", amountStr) != 1) return false;
-        
+
+    // Enter amount
+    while (1) {
+        printf("Enter amount to transfer (RM 0.01 - RM 50,000.00): ");
+        if (!readLine(amountStr, sizeof(amountStr))) return false;
+
         if (!isPositiveNumber(amountStr)) {
-            printf("Invalid amount. Please enter a positive number.\n");
+            printf("Please enter numbers only.\n");
             continue;
         }
-        
+
         amount = atof(amountStr);
-        
-        // Calculate fee
-        if (currentUser.type == SAVINGS && receiver.type == CURRENT) {
+        if (!isValidAmount(amount)) {
+            printf("Amount must be between RM 0.01 - RM 50,000.\n");
+            continue;
+        }
+
+        // Fees based on account types
+        if (strcmp(sender.accountType, "Savings") == 0 &&
+            strcmp(receiver.accountType, "Current") == 0) {
             fee = amount * 0.02;
-        } else if (currentUser.type == CURRENT && receiver.type == SAVINGS) {
+        }
+        else if (strcmp(sender.accountType, "Current") == 0 &&
+                 strcmp(receiver.accountType, "Savings") == 0) {
             fee = amount * 0.03;
         }
-        
-        double totalDeduction = amount + fee;
-        
-        if (totalDeduction > currentUser.balance) {
-            printf("Insufficient funds. Required: RM %.2lf (Amount: RM %.2lf + Fee: RM %.2lf)\n", 
-                   totalDeduction, amount, fee);
+        else {
+            fee = 0;
+        }
+
+        double total = amount + fee;
+        if (total > sender.balance) {
+            printf("Insufficient funds (need RM %.2f including fee RM %.2f).\n",
+                   total, fee);
             return false;
         }
-        
-        if (!isValidAmount(amount)) {
-            printf("Amount must be between RM 0.01 and RM 50,000.\n");
-        }
-    } while (!isValidAmount(amount));
-    
-    // Load fresh copies
-    BankAccount sender, receiverFresh;
-    loadAccount(currentUser.accountNumber, &sender);
-    loadAccount(receiverAccount, &receiverFresh);
-    
-    // Perform transfer
-    sender.balance -= (amount + fee);
-    receiverFresh.balance += amount;
-    
-    if (saveAccount(&sender) && saveAccount(&receiverFresh)) {
-        printf("Transfer successful!\n");
-        printf("Transfer: RM %.2lf\n", amount);
-        if (fee > 0) printf("Fee: RM %.2lf\n", fee);
-        printf("Your new balance: RM %.2lf\n", sender.balance);
-        
-        logTransaction("REMITTANCE", sender.accountNumber, amount, receiverAccount);
-        if (fee > 0) logTransaction("REMITTANCE_FEE", sender.accountNumber, fee, NULL);
-        
-        currentUser.balance = sender.balance;
-        return true;
-    } else {
-        printf("Transfer failed!\n");
+
+        break;
+    }
+
+    // Reload accounts before updating
+    BankAccount freshSender, freshReceiver;
+    if (!loadAccount(senderAccNum, &freshSender) ||
+        !loadAccount(receiverAccNum, &freshReceiver)) {
+        printf("Error loading account files.\n");
         return false;
     }
+
+    // Update balances
+    freshSender.balance -= (amount + fee);
+    freshReceiver.balance += amount;
+
+    // Save changes
+    if (!saveAccount(&freshSender) || !saveAccount(&freshReceiver)) {
+        printf("Failed to save updated accounts.\n");
+        return false;
+    }
+
+    printf("\nTransfer successful!\n");
+    printf("Transferred: RM %.2f\n", amount);
+    if (fee > 0) printf("Fee charged: RM %.2f\n", fee);
+    printf("New sender balance: RM %.2f\n", freshSender.balance);
+
+    // Logging
+    logTransaction("REMITTANCE", senderAccNum, amount, receiverAccNum);
+    if (fee > 0) {
+        logTransaction("REMITTANCE_FEE", senderAccNum, fee, "");
+    }
+
+    return true;
 }
