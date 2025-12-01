@@ -1,107 +1,62 @@
-#include <stdio.h>
-#include <stdlib.h> 
-#include <stdint.h> 
-#include <stdbool.h> 
-#include <string.h> 
-#include <ctype.h> 
-#include <time.h> 
-#include <errno.h> 
-#include <limits.h>
+#include "menu.h"
+#include "create_acc.h"
+#include "deposit.h"
+#include "withdraw.h"
+#include "remittance.h"
+#include "delete_acc.h"
 
-char session_time[50];
-int accounts_loaded = 0;
-bool logged_in = false;
-char current_account[50];
+static char session_time[50];
 
-// Convert string to lowercase
-void toLowerCase(char *str) {
+static void toLowerCase(char *str) {
     for (int i = 0; str[i]; i++) {
-        str[i] = tolower(str[i]);
+        str[i] = (char)tolower((unsigned char)str[i]);
     }
 }
- 
-// Keyword OR number → menu choice
-int keywordToChoice(char *input) {
+
+static int keywordToChoice(char *input) {
     toLowerCase(input);
 
-    if (strcmp(input, "1") == 0 || strcmp(input, "create") == 0) return 1;
-    if (strcmp(input, "2") == 0 || strcmp(input, "login") == 0) return 2;
-    if (strcmp(input, "3") == 0 || strcmp(input, "deposit") == 0) return 3;
-    if (strcmp(input, "4") == 0 || strcmp(input, "withdraw") == 0) return 4;
-    if (strcmp(input, "5") == 0 || strcmp(input, "remittance") == 0) return 5;
-    if (strcmp(input, "6") == 0 || strcmp(input, "delete") == 0) return 6;
-    if (strcmp(input, "7") == 0 || strcmp(input, "logout") == 0) return 7;
-    if (strcmp(input, "8") == 0 || strcmp(input, "exit") == 0) return 8;
+    if (!strcmp(input, "1") || !strcmp(input, "create"))      return 1;
+    if (!strcmp(input, "2") || !strcmp(input, "deposit"))     return 2;
+    if (!strcmp(input, "3") || !strcmp(input, "withdraw"))    return 3;
+    if (!strcmp(input, "4") || !strcmp(input, "remittance"))  return 4;
+    if (!strcmp(input, "5") || !strcmp(input, "delete"))      return 5;
+    if (!strcmp(input, "6") || !strcmp(input, "exit"))        return 6;
 
     return -1;
 }
 
-// Get Date/Time (Required)
-void getCurrentDateTime(char *buffer, int size) {
-    time_t rawtime;
-    struct tm *timeinfo;
+void initializeSession(void) {
+    srand((unsigned int)time(NULL));
 
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-
-    strftime(buffer, size, "%Y-%m-%d %H:%M:%S", timeinfo);
-}
-
-// Log Transaction
-void logTransaction(const char *from, const char *to, double amount, const char *type) {
-    FILE *file = fopen("database/transaction.log", "a");
-    if (!file) return;
-
-    char timestamp[50];
-    getCurrentDateTime(timestamp, sizeof(timestamp));
-
-    fprintf(file, "[%s] %s: From=%s, To=%s, Amount=%.2f\n",
-            timestamp, type, from, to, amount);
-
-    fclose(file);
-}
-
-// Initialize Session
-void initializeSession() {
     getCurrentDateTime(session_time, sizeof(session_time));
-    accounts_loaded = countExistingAccounts();
+    int accounts = countExistingAccounts();
 
-    printf("=== HM BANKING SYSTEM ===\n");
+    printf("=== WELCOME TO BANKING SYSTEM ===\n");
     printf("Session started: %s\n", session_time);
-    printf("Accounts in system: %d\n", accounts_loaded);
-    printf("==================================\n\n");
+    printf("Accounts in system: %d\n", accounts);
+    printf("====================================\n\n");
 
-    logTransaction("SYSTEM", "SYSTEM", 0, "Session started");
+    logTransaction("SESSION_START", "-", 0.0, "");
 }
 
-// Display Session Info (shown before each menu)
-void displaySessionInfo() {
-    printf("Session: %s | Accounts: %d", session_time, accounts_loaded);
-    if (logged_in) {
-        printf(" | Logged in: %s", current_account);
-    }
-    printf("\n");
+void displaySessionInfo(void) {
+    int accounts = countExistingAccounts();
+    printf("\n[Session: %s | Accounts: %d]\n", session_time, accounts);
 }
 
-// Display Menu
-void displayMenu() {
-    printf("\n=== HM BANKING SYSTEM ===\n");
-    printf("------------------------------------------------------------\n\n");
-    printf("            -- Main Menu --\n\n");
-    printf("1. Create New Account (or type 'create')\n");
-    printf("2. Login to Account (or type 'login')\n");
-    printf("3. Deposit Money (or type 'deposit')\n");
-    printf("4. Withdraw Money (or type 'withdraw')\n");
-    printf("5. Remittance (or type 'remittance')\n");
-    printf("6. Delete Account (or type 'delete')\n");
-    printf("7. Logout (or type 'logout')\n");
-    printf("8. Exit System (or type 'exit')\n");
-    printf("\n------------------------------------------------------------\n");
+void displayMenu(void) {
+    printf("\n=== Main Menu ===\n");
+    printf("1. Create New Account (or 'create')\n");
+    printf("2. Deposit Money (or 'deposit')\n");
+    printf("3. Withdraw Money (or 'withdraw')\n");
+    printf("4. Remittance / Transfer (or 'remittance')\n");
+    printf("5. Delete Account (or 'delete')\n");
+    printf("6. Exit System (or 'exit')\n");
     printf("Choose option: ");
 }
 
-// Run Banking System
-void runBankingSystem() {
+void runBankingSystem(void) {
     char input[100];
     int choice;
 
@@ -109,9 +64,10 @@ void runBankingSystem() {
         displaySessionInfo();
         displayMenu();
 
-        // Get user input as either number OR keyword
-        fgets(input, sizeof(input), stdin);
-        input[strcspn(input, "\n")] = 0;
+        if (!readLine(input, sizeof(input))) {
+            printf("Input error.\n");
+            continue;
+        }
 
         choice = keywordToChoice(input);
 
@@ -123,49 +79,27 @@ void runBankingSystem() {
         switch (choice) {
             case 1:
                 createNewAccount();
-                accounts_loaded = countExistingAccounts();
                 break;
 
             case 2:
-                loginToAccount();
+                depositMoney();
                 break;
 
             case 3:
-                if (!logged_in)
-                    printf("Please login first to deposit money.\n");
-                else
-                    depositMoney();
+                withdrawMoney();
                 break;
 
             case 4:
-                if (!logged_in)
-                    printf("Please login first to withdraw money.\n");
-                else
-                    withdrawMoney();
+                remitMoney();
                 break;
 
             case 5:
-                if (!logged_in)
-                    printf("Please login first to transfer money.\n");
-                else
-                    performRemittance();
+                deleteBankAccount();
                 break;
 
             case 6:
-                if (!logged_in)
-                    printf("Please login first to delete your account.\n");
-                else {
-                    deleteAccount();
-                    accounts_loaded = countExistingAccounts();
-                }
-                break;
-
-            case 7:
-                logoutUser();
-                break;
-
-            case 8:
-                exitSystem();
+                printf("Exiting system. Goodbye!\n");
+                logTransaction("SESSION_END", "-", 0.0, "");
                 return;
         }
     }
