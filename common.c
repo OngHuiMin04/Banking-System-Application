@@ -1,66 +1,63 @@
 // common.c (toolbox (helpers shared by all components))
 #include "common.h"
 
-bool isLoggedIn = false;
-BankAccount currentUser;
-
-// ---------- small helpers ----------
+/* ------------------ Input Helpers ------------------ */
 void clearInputBuffer(void) {
     int c;
-    while ((c = getchar()) != '\n' && c != EOF) { }
+    while ((c = getchar()) != '\n' && c != EOF) {}
 }
 
 bool readLine(char *buffer, size_t size) {
-    if (fgets(buffer, (int)size, stdin) == NULL) {
+    if (!fgets(buffer, (int)size, stdin))
         return false;
-    }
     buffer[strcspn(buffer, "\n")] = '\0';
     return true;
 }
 
 void getCurrentDateTime(char *buffer, int size) {
     time_t now = time(NULL);
-    struct tm *tm_info = localtime(&now);
-    strftime(buffer, size, "%Y-%m-%d %H:%M:%S", tm_info);
+    struct tm *info = localtime(&now);
+    strftime(buffer, size, "%Y-%m-%d %H:%M:%S", info);
 }
 
-// ---------- logging ----------
+/* ------------------ Logging ------------------ */
 void logTransaction(const char *action,
                     const char *account,
                     double amount,
-                    const char *extra) {
+                    const char *extra)
+{
     FILE *fp = fopen(TRANSACTION_LOG, "a");
     if (!fp) return;
 
-    char timestamp[50];
-    getCurrentDateTime(timestamp, sizeof(timestamp));
+    char stamp[50];
+    getCurrentDateTime(stamp, sizeof(stamp));
 
     fprintf(fp, "[%s] %-15s | Acc=%s | Amount=%.2f",
-            timestamp,
+            stamp,
             action ? action : "-",
             account ? account : "-",
             amount);
 
-    if (extra && extra[0] != '\0') {
+    if (extra && extra[0] != '\0')
         fprintf(fp, " | Extra=%s", extra);
-    }
-    fprintf(fp, "\n");
 
+    fprintf(fp, "\n");
     fclose(fp);
 }
 
-// ---------- index & account count ----------
+/* ------------------ Index File ------------------ */
 int countExistingAccounts(void) {
     FILE *fp = fopen(INDEX_FILE, "r");
     if (!fp) return 0;
 
-    int count = 0;
+    int cnt = 0;
     char acc[ACCOUNT_NUM_LEN];
-    while (fscanf(fp, "%s", acc) == 1) {
-        count++;
-    }
+
+    while (fscanf(fp, "%s", acc) == 1)
+        cnt++;
+
     fclose(fp);
-    return count;
+    return cnt;
 }
 
 int loadAllAccounts(char accounts[][ACCOUNT_NUM_LEN]) {
@@ -68,9 +65,9 @@ int loadAllAccounts(char accounts[][ACCOUNT_NUM_LEN]) {
     if (!fp) return 0;
 
     int count = 0;
-    while (count < 100 && fscanf(fp, "%s", accounts[count]) == 1) {
+    while (count < 100 && fscanf(fp, "%s", accounts[count]) == 1)
         count++;
-    }
+
     fclose(fp);
     return count;
 }
@@ -79,8 +76,8 @@ bool removeFromIndexFile(const char *target) {
     FILE *fp = fopen(INDEX_FILE, "r");
     if (!fp) return false;
 
-    FILE *tmp = fopen("database/index_tmp.txt", "w");
-    if (!tmp) {
+    FILE *temp = fopen("database/index_tmp.txt", "w");
+    if (!temp) {
         fclose(fp);
         return false;
     }
@@ -89,15 +86,14 @@ bool removeFromIndexFile(const char *target) {
     bool found = false;
 
     while (fscanf(fp, "%s", acc) == 1) {
-        if (strcmp(acc, target) == 0) {
-            found = true;  // skip writing
-        } else {
-            fprintf(tmp, "%s\n", acc);
-        }
+        if (strcmp(acc, target) == 0)
+            found = true;
+        else
+            fprintf(temp, "%s\n", acc);
     }
 
     fclose(fp);
-    fclose(tmp);
+    fclose(temp);
 
     remove(INDEX_FILE);
     rename("database/index_tmp.txt", INDEX_FILE);
@@ -105,25 +101,25 @@ bool removeFromIndexFile(const char *target) {
     return found;
 }
 
-// ---------- validation ----------
+/* ------------------ Validation ------------------ */
 bool validateName(const char *name) {
-    return name && strlen(name) > 0;
+    return (name && strlen(name) > 0);
 }
 
 bool validateID(const char *id) {
-    return id && strlen(id) > 0;
+    return (id && strlen(id) > 0);
 }
 
 bool validateAccountType(const char *input, char *outType) {
-    if (!input || !outType) return false;
+    if (!input || !outType)
+        return false;
 
     char lower[ACCTYPE_LEN];
     strncpy(lower, input, ACCTYPE_LEN - 1);
     lower[ACCTYPE_LEN - 1] = '\0';
 
-    for (int i = 0; lower[i]; i++) {
-        lower[i] = (char)tolower((unsigned char)lower[i]);
-    }
+    for (int i = 0; lower[i]; i++)
+        lower[i] = (char)tolower(lower[i]);
 
     if (strcmp(lower, "savings") == 0) {
         strcpy(outType, "Savings");
@@ -133,30 +129,34 @@ bool validateAccountType(const char *input, char *outType) {
         strcpy(outType, "Current");
         return true;
     }
+
     return false;
 }
 
 bool validatePIN(const char *pin) {
-    if (!pin) return false;
-    if (strlen(pin) != 4) return false;
-    for (int i = 0; i < 4; i++) {
-        if (!isdigit((unsigned char)pin[i])) return false;
-    }
+    if (!pin || strlen(pin) != 4)
+        return false;
+
+    for (int i = 0; i < 4; i++)
+        if (!isdigit(pin[i])) return false;
+
     return true;
 }
 
 bool isPositiveNumber(const char *str) {
-    if (!str || !str[0]) return false;
+    if (!str || !str[0])
+        return false;
 
-    int dotCount = 0;
+    int dot = 0;
+
     for (int i = 0; str[i]; i++) {
         if (str[i] == '.') {
-            dotCount++;
-            if (dotCount > 1) return false;
-        } else if (!isdigit((unsigned char)str[i])) {
+            if (++dot > 1) return false;
+        } else if (!isdigit(str[i])) {
             return false;
         }
     }
+
     return true;
 }
 
@@ -164,7 +164,7 @@ bool isValidAmount(double amount) {
     return amount >= 0.01 && amount <= 50000.0;
 }
 
-// ---------- account files ----------
+/* ------------------ Account Files ------------------ */
 bool accountExists(const char *accountNumber) {
     char path[128];
     snprintf(path, sizeof(path), "%s/%s.txt", DATABASE_DIR, accountNumber);
@@ -178,27 +178,33 @@ bool accountExists(const char *accountNumber) {
 }
 
 int generateAccountNumber(void) {
-    // 7 to 9 digits
-    for (int attempts = 0; attempts < 1000; attempts++) {
+    for (int attempt = 0; attempt < 1000; attempt++) {
+
         int digits = 7 + rand() % 3;
+
         int min = 1;
-        for (int i = 1; i < digits; i++) min *= 10;
+        for (int i = 1; i < digits; i++)
+            min *= 10;
 
         int max = min * 10 - 1;
+
         int num = min + rand() % (max - min + 1);
 
         char buf[ACCOUNT_NUM_LEN];
         snprintf(buf, sizeof(buf), "%d", num);
 
         if (!accountExists(buf)) {
-            // append to index file
+
             FILE *idx = fopen(INDEX_FILE, "a");
             if (!idx) return -1;
+
             fprintf(idx, "%s\n", buf);
             fclose(idx);
+
             return num;
         }
     }
+
     return -1;
 }
 
@@ -209,17 +215,15 @@ bool saveAccount(const BankAccount *acc) {
     snprintf(path, sizeof(path), "%s/%s.txt", DATABASE_DIR, acc->accountNumber);
 
     FILE *fp = fopen(path, "w");
-    if (!fp) {
-        printf("Error: cannot open account file for writing.\n");
-        return false;
-    }
+    if (!fp) return false;
 
-    fprintf(fp, "%s\n", acc->accountNumber);
-    fprintf(fp, "%s\n", acc->name);
-    fprintf(fp, "%s\n", acc->id);
-    fprintf(fp, "%s\n", acc->accountType);
-    fprintf(fp, "%s\n", acc->pin);
-    fprintf(fp, "%.2f\n", acc->balance);
+    fprintf(fp, "%s\n%s\n%s\n%s\n%s\n%.2f\n",
+            acc->accountNumber,
+            acc->name,
+            acc->id,
+            acc->accountType,
+            acc->pin,
+            acc->balance);
 
     fclose(fp);
     return true;
@@ -232,40 +236,42 @@ bool loadAccount(const char *accountNumber, BankAccount *acc) {
     snprintf(path, sizeof(path), "%s/%s.txt", DATABASE_DIR, accountNumber);
 
     FILE *fp = fopen(path, "r");
-    if (!fp) {
-        return false;
-    }
+    if (!fp) return false;
 
-    if (!fgets(acc->accountNumber, ACCOUNT_NUM_LEN, fp)) { fclose(fp); return false; }
+    fgets(acc->accountNumber, ACCOUNT_NUM_LEN, fp);
     acc->accountNumber[strcspn(acc->accountNumber, "\n")] = '\0';
 
-    if (!fgets(acc->name, NAME_LEN, fp)) { fclose(fp); return false; }
+    fgets(acc->name, NAME_LEN, fp);
     acc->name[strcspn(acc->name, "\n")] = '\0';
 
-    if (!fgets(acc->id, ID_LEN, fp)) { fclose(fp); return false; }
+    fgets(acc->id, ID_LEN, fp);
     acc->id[strcspn(acc->id, "\n")] = '\0';
 
-    if (!fgets(acc->accountType, ACCTYPE_LEN, fp)) { fclose(fp); return false; }
+    fgets(acc->accountType, ACCTYPE_LEN, fp);
     acc->accountType[strcspn(acc->accountType, "\n")] = '\0';
 
-    if (!fgets(acc->pin, PIN_LENGTH, fp)) { fclose(fp); return false; }
+    fgets(acc->pin, PIN_LENGTH, fp);
     acc->pin[strcspn(acc->pin, "\n")] = '\0';
 
-    if (fscanf(fp, "%lf", &acc->balance) != 1) { fclose(fp); return false; }
+    fscanf(fp, "%lf", &acc->balance);
 
     fclose(fp);
     return true;
 }
 
+/* ------------------ PIN Verification ------------------ */
 bool authenticateAccount(const char *accountNumber, const char *pin) {
     BankAccount acc;
+
     if (!loadAccount(accountNumber, &acc)) {
         printf("Account not found.\n");
         return false;
     }
+
     if (strcmp(acc.pin, pin) != 0) {
-        printf("Invalid PIN.\n");
+        printf("Incorrect PIN.\n");
         return false;
     }
+
     return true;
 }

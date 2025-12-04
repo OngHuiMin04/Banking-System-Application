@@ -98,7 +98,7 @@ void runBankingSystem(void) {
                 break;
 
             case 6:
-                printf("Exiting system. Goodbye!\n");
+                printf("Thank you for using Banking System.\n");
                 logTransaction("SESSION_END", "-", 0.0, "");
                 return;
         }
