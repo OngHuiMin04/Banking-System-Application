@@ -1,60 +1,54 @@
-#include "create_acc.h"
-#include "deposit.h"
-#include "withdraw.h"
-#include "remittance.h"
-#include "delete_acc.h"
-#include "common.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#ifdef _WIN32
+#include <direct.h>   // Required for _mkdir() on Windows
+#endif
+
 #include "menu.h"
+#include "common.h"
 
-int main() {
-    srand((unsigned int)time(NULL));
-
-    int choice;
-    char buf[10];
-
-    void initializeSession(void) {
-    srand((unsigned int)time(NULL));
-
-    getCurrentDateTime(session_time, sizeof(session_time));
-    int accounts = countExistingAccounts();
-
-    printf("=== WELCOME TO BANKING SYSTEM ===\n");
-    printf("Session started: %s\n", session_time);
-    printf("Accounts in system: %d\n", accounts);
-    printf("====================================\n\n");
-
-    logTransaction("SESSION_START", "-", 0.0, "");
+/* ----------------------------------------------------
+   Create database directory if not exists
+---------------------------------------------------- */
+void ensureDatabaseDirectory(void) {
+#ifdef _WIN32
+    _mkdir(DATABASE_DIR);
+#else
+    mkdir(DATABASE_DIR, 0777);
+#endif
 }
 
-    while (1) {
-        printf("\n=== WELCOME TO BANKING SYSTEM ===\n");
-        printf("1. Create New Account\n");
-        printf("2. Deposit Money\n");
-        printf("3. Withdraw Money\n");
-        printf("4. Transfer / Remittance\n");
-        printf("5. Delete Bank Account\n");
-        printf("6. Exit\n");
-        printf("Choose an option: ");
+/* ----------------------------------------------------
+   Create index.txt and transaction.log if not exists
+---------------------------------------------------- */
+void ensureDatabaseFiles(void) {
+    FILE *fp;
 
-        if (!readLine(buf, sizeof(buf))) continue;
-        choice = atoi(buf);
+    // index.txt
+    fp = fopen(INDEX_FILE, "a");
+    if (fp) fclose(fp);
 
-        switch (choice) {
-            case 1: createNewAccount(); break;
-            case 2: depositMoney(); break;
-            case 3: withdrawMoney(); break;
-            case 4: remitMoney(); break;
-            case 5: deleteBankAccount(); break;
+    // transaction.log
+    fp = fopen(TRANSACTION_LOG, "a");
+    if (fp) fclose(fp);
+}
 
-            case 6:
-                printf("Thank you for using Banking System.\n");
-                return 0;
+/* ----------------------------------------------------
+   MAIN FUNCTION
+---------------------------------------------------- */
+int main(void) {
+    // 1. Ensure required storage directories & files exist
+    ensureDatabaseDirectory();
+    ensureDatabaseFiles();
 
-            default:
-                printf("Invalid choice. Try again.\n");
-        }
-    }
+    // 2. Start session
+    initializeSession();
+
+    // 3. Run full system loop
+    runBankingSystem();
 
     return 0;
 }
-
