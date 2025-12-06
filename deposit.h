@@ -3,69 +3,92 @@
 
 #include "common.h"
 
-/* ---------------------------------------
-   Function Prototype
----------------------------------------- */
 bool depositMoney(void);
 
-/* ---------------------------------------
-   Full Function Implementation
----------------------------------------- */
 bool depositMoney(void) {
-    printf("\n=== Deposit Money ===\n");
+    printf("\n========== DEPOSIT MONEY ==========\n");
+
+    /* -----------------------------
+       SELECT ACCOUNT
+    ----------------------------- */
+    char accounts[100][ACCOUNT_NUM_LEN];
+    int count = loadAllAccounts(accounts);
+    int index = showAccountSelection(accounts, count);
+    if (index == -1) return false;
 
     char accountNumber[ACCOUNT_NUM_LEN];
-    char pin[PIN_LENGTH];
-    char amountStr[32];
-    double amount;
+    strcpy(accountNumber, accounts[index]);
 
-    // Account number
-    printf("Enter account number: ");
-    if (!readLine(accountNumber, sizeof(accountNumber)))
-        return false;
-
-    // PIN
-    printf("Enter 4-digit PIN: ");
-    if (!readLine(pin, sizeof(pin)) || !validatePIN(pin))
-        return false;
-
-    // Load account
     BankAccount acc;
     if (!loadAccount(accountNumber, &acc)) {
         printf("Account not found.\n");
         return false;
     }
 
-    // PIN check
-    if (strcmp(pin, acc.pin) != 0) {
+    /* -----------------------------
+       PIN VERIFICATION
+    ----------------------------- */
+    char pinInput[50];
+    printf("Enter 4-digit PIN: ");
+    if (!readLine(pinInput, sizeof(pinInput)) || strcmp(pinInput, acc.pin) != 0) {
         printf("Incorrect PIN.\n");
         return false;
     }
 
-    // Deposit amount
+    /* -----------------------------
+       ENTER DEPOSIT AMOUNT
+    ----------------------------- */
+    char amountStr[32];
+    double amount = 0.0;
+
     while (1) {
-        printf("Enter deposit amount: ");
+        printf("\nEnter amount to deposit (RM 0.01 - RM 50000.00): ");
+
         if (!readLine(amountStr, sizeof(amountStr)))
             return false;
 
-        if (!isPositiveNumber(amountStr))
-            continue;
+        // Check numeric format manually
+        bool validFormat = true;
+        int dots = 0;
 
+        for (int i = 0; amountStr[i] != '\0'; i++) {
+            if (amountStr[i] == '.') {
+                dots++;
+                if (dots > 1) { validFormat = false; break; }
+            } else if (!isdigit((unsigned char)amountStr[i])) {
+                validFormat = false;
+                break;
+            }
+        }
+
+        if (!validFormat) {
+            printf("Invalid input. Please enter a valid number.\n");
+            continue;
+        }
+
+        // Convert to double
         amount = atof(amountStr);
 
-        if (isValidAmount(amount))
-            break;
+        if (amount < 0.01 || amount > 50000.00) {
+            printf("Amount must be between RM 0.01 and RM 50000.00.\n");
+            continue;
+        }
+
+        break;  // Valid amount
     }
 
-    // Update balance
+    /* -----------------------------
+       UPDATE BALANCE
+    ----------------------------- */
     acc.balance += amount;
-
-    // Save account
     saveAccount(&acc);
 
-    printf("Deposit successful. New balance: RM %.2f\n", acc.balance);
+    /* -----------------------------
+       OUTPUT RESULT
+    ----------------------------- */
+    printf("\nDeposit successful!\n\n");
+    printf("New Balance: RM %.2f\n", acc.balance);
 
-    // Logging
     logTransaction("DEPOSIT", accountNumber, amount, "");
 
     return true;
