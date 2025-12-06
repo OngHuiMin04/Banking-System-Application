@@ -11,9 +11,9 @@
 #include <errno.h>
 #include <limits.h>
 
-/* -------------------------------
-    CONSTANTS 
--------------------------------- */
+/* ==========================================================
+   CONSTANTS
+   ========================================================== */
 #define DATABASE_DIR      "database"
 #define INDEX_FILE        "database/index.txt"
 #define TRANSACTION_LOG   "database/transaction.log"
@@ -22,23 +22,24 @@
 #define NAME_LEN          50
 #define ID_LEN            20
 #define ACCTYPE_LEN       10
-#define PIN_LENGTH        5     // 4 digits + '\0'
+#define PIN_LENGTH        5     /* 4 digits + '\0' */
 
-/* -------------------------------
-    STRUCT
--------------------------------- */
+/* ==========================================================
+   STRUCT DEFINITION
+   ========================================================== */
 typedef struct {
     char accountNumber[ACCOUNT_NUM_LEN];
     char name[NAME_LEN];
     char id[ID_LEN];
-    char accountType[ACCTYPE_LEN]; // "Savings" or "Current"
+    char accountType[ACCTYPE_LEN]; /* Savings or Current */
     char pin[PIN_LENGTH];
     double balance;
 } BankAccount;
 
-/* -------------------------------
-    FUNCTION PROTOTYPES
--------------------------------- */
+/* ==========================================================
+   FUNCTION PROTOTYPES
+   ========================================================== */
+
 /* Input helpers */
 void clearInputBuffer(void);
 bool readLine(char *buffer, size_t size);
@@ -50,7 +51,7 @@ void logTransaction(const char *action,
                     double amount,
                     const char *extra);
 
-/* Account index management */
+/* Index file helpers */
 int  countExistingAccounts(void);
 int  loadAllAccounts(char accounts[][ACCOUNT_NUM_LEN]);
 bool removeFromIndexFile(const char *target);
@@ -59,8 +60,6 @@ bool removeFromIndexFile(const char *target);
 bool validatePIN(const char *pin);
 bool isPositiveNumber(const char *str);
 bool isValidAmount(double amount);
-
-/* Strict validation helpers */
 bool validateNameStrict(const char *name);
 bool validateIDStrict(const char *id);
 
@@ -70,16 +69,16 @@ bool accountExists(const char *accountNumber);
 bool saveAccount(const BankAccount *acc);
 bool loadAccount(const char *accountNumber, BankAccount *acc);
 
-/* Account selection menu */
-int  showAccountSelection(char accounts[][ACCOUNT_NUM_LEN], int count);
+/* Account menu selection */
+int showAccountSelection(char accounts[][ACCOUNT_NUM_LEN], int count);
 
 /* ==========================================================
    IMPLEMENTATIONS
    ========================================================== */
 
-/* -------------------------------
-    Input Helpers
--------------------------------- */
+/* ==========================================================
+   INPUT HELPERS
+   ========================================================== */
 void clearInputBuffer(void) {
     int c;
     while ((c = getchar()) != '\n' && c != EOF) {}
@@ -98,9 +97,9 @@ void getCurrentDateTime(char *buffer, int size) {
     strftime(buffer, size, "%Y-%m-%d %H:%M:%S", info);
 }
 
-/* -------------------------------
-    Logging
--------------------------------- */
+/* ==========================================================
+   TRANSACTION LOGGING
+   ========================================================== */
 void logTransaction(const char *action,
                     const char *account,
                     double amount,
@@ -125,16 +124,15 @@ void logTransaction(const char *action,
     fclose(fp);
 }
 
-/* -------------------------------
-    Index File 
--------------------------------- */
+/* ==========================================================
+   INDEX FILE HANDLING
+   ========================================================== */
 int countExistingAccounts(void) {
     FILE *fp = fopen(INDEX_FILE, "r");
     if (!fp) return 0;
 
     int cnt = 0;
     char acc[ACCOUNT_NUM_LEN];
-
     while (fscanf(fp, "%s", acc) == 1)
         cnt++;
 
@@ -183,14 +181,17 @@ bool removeFromIndexFile(const char *target) {
     return found;
 }
 
-/* -------------------------------
-    Validation 
--------------------------------- */
+/* ==========================================================
+   VALIDATION FUNCTIONS
+   ========================================================== */
 bool validatePIN(const char *pin) {
     if (!pin || strlen(pin) != 4)
         return false;
+
     for (int i = 0; i < 4; i++)
-        if (!isdigit((unsigned char)pin[i])) return false;
+        if (!isdigit((unsigned char)pin[i]))
+            return false;
+
     return true;
 }
 
@@ -214,9 +215,6 @@ bool isValidAmount(double amount) {
     return amount >= 0.01 && amount <= 50000.0;
 }
 
-/* -------------------------------
-   Strict Validation: Name (letters + spaces only)
--------------------------------- */
 bool validateNameStrict(const char *name) {
     if (!name) return false;
 
@@ -230,36 +228,28 @@ bool validateNameStrict(const char *name) {
 
         if (isalpha(c)) {
             hasAlpha = true;
-        } else if (c == ' ') {
-            continue;  // space allowed
-        } else {
-            return false;  // digits or symbols not allowed
+        } else if (c != ' ') {
+            return false;
         }
     }
-
-    return hasAlpha;  // must have at least one letter
+    return hasAlpha;
 }
 
-/* -------------------------------
-    Strict Validation: ID (must be exactly 12 digits)
--------------------------------- */
 bool validateIDStrict(const char *id) {
     if (!id) return false;
 
-    size_t len = strlen(id);
-    if (len != 12) return false;
+    if (strlen(id) != 12) return false;
 
-    for (size_t i = 0; i < 12; i++) {
+    for (int i = 0; i < 12; i++) {
         if (!isdigit((unsigned char)id[i]))
             return false;
     }
-
     return true;
 }
 
-/* -------------------------------
-    Account Files 
--------------------------------- */
+/* ==========================================================
+   ACCOUNT FILE HANDLING
+   ========================================================== */
 bool accountExists(const char *accountNumber) {
     char path[128];
     snprintf(path, sizeof(path), "%s/%s.txt", DATABASE_DIR, accountNumber);
@@ -275,7 +265,7 @@ bool accountExists(const char *accountNumber) {
 int generateAccountNumber(void) {
     for (int attempt = 0; attempt < 1000; attempt++) {
 
-        int digits = 7 + rand() % 3;  // 7–9 digits
+        int digits = 7 + rand() % 3; /* 7–9 digits */
 
         int min = 1;
         for (int i = 1; i < digits; i++)
@@ -298,7 +288,6 @@ int generateAccountNumber(void) {
             return num;
         }
     }
-
     return -1;
 }
 
@@ -349,20 +338,24 @@ bool loadAccount(const char *accountNumber, BankAccount *acc) {
     return true;
 }
 
-/* -------------------------------
-    ACCOUNT SELECTION MENU 
--------------------------------- */
+/* ==========================================================
+   ACCOUNT SELECTION MENU (WITH RETURN OPTION)
+   ========================================================== */
 int showAccountSelection(char accounts[][ACCOUNT_NUM_LEN], int count) {
+
     if (count == 0) {
         printf("No accounts available.\n");
         return -1;
     }
 
-    printf("\n=== Available Accounts ===\n");
+    printf("\n===============================================\n");
+    printf("               AVAILABLE ACCOUNTS              \n");
+    printf("===============================================\n");
+
     for (int i = 0; i < count; i++) {
         BankAccount acc;
         if (loadAccount(accounts[i], &acc)) {
-            printf("%d. %s  (%s)  - %s\n",
+            printf("%2d. %-10s  %-20s  (%s)\n",
                    i + 1,
                    acc.accountNumber,
                    acc.name,
@@ -370,23 +363,34 @@ int showAccountSelection(char accounts[][ACCOUNT_NUM_LEN], int count) {
         }
     }
 
-    char input[10];
+    printf(" 0. RETURN TO PREVIOUS MENU\n");
+    printf("===============================================\n");
+
+    char input[20];
     int choice;
 
     while (1) {
-        printf("Choose an account (1-%d): ", count);
-        if (!readLine(input, sizeof(input))) return -1;
+        printf("Choose an option (0-%d): ", count);
 
+        if (!readLine(input, sizeof(input)))
+            return -1;
+
+        /* RETURN OPTION */
+        if (strcmp(input, "0") == 0)
+            return -1;
+
+        /* VALIDATION */
         if (!isPositiveNumber(input)) {
-            printf("Please enter a valid number.\n");
+            printf("Invalid selection. Digits only.\n");
             continue;
         }
 
         choice = atoi(input);
+
         if (choice >= 1 && choice <= count)
             return choice - 1;
 
-        printf("Invalid option.\n");
+        printf("Invalid option. Please try again.\n");
     }
 }
 

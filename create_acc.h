@@ -5,53 +5,56 @@
 
 void createNewAccount(void);
 
+/* ==========================================================
+   CREATE NEW ACCOUNT
+   ========================================================== */
 void createNewAccount(void) {
     BankAccount new_account;
     char buffer[100];
 
-    printf("\n=== Create New Account ===\n");
+    printf("\n===============================================\n");
+    printf("              CREATE NEW ACCOUNT\n");
+    printf("===============================================\n");
 
-    /* -----------------------------
-       ENTER NAME (letters only)
-    ----------------------------- */
+    /* ======================================================
+       ENTER NAME (LETTERS + SPACES ONLY)
+       ====================================================== */
     while (1) {
-        printf("Enter account holder name: ");
+        printf("\nEnter Account Holder Name: ");
         if (!readLine(new_account.name, sizeof(new_account.name)))
             return;
 
         if (!validateNameStrict(new_account.name)) {
-            printf("Invalid name. Only alphabets and spaces allowed.\n");
-            continue;  // ask again
+            printf("  Invalid name. Only alphabets and spaces allowed.\n");
+            continue;
         }
-
         break;
     }
 
-    /* -----------------------------
-       ENTER ID (12 digits)
-    ----------------------------- */
+    /* ======================================================
+       ENTER IDENTIFICATION NUMBER (12 DIGITS ONLY)
+       ====================================================== */
     while (1) {
-        printf("Enter identification number (12 digits): ");
+        printf("\nEnter Identification Number (12 digits): ");
         if (!readLine(new_account.id, sizeof(new_account.id)))
             return;
 
         if (!validateIDStrict(new_account.id)) {
-            printf("ID must contain exactly 12 digits.\n");
-            continue;  // ask again
+            printf("  Invalid ID. Your ID must contain exactly 12 digits.\n");
+            continue;
         }
-
         break;
     }
 
-    /* -----------------------------
-       ACCOUNT TYPE
-    ----------------------------- */
+    /* ======================================================
+       SELECT ACCOUNT TYPE
+       ====================================================== */
     printf("\nSelect Account Type:\n");
-    printf("1. Savings\n");
-    printf("2. Current\n");
+    printf("  1. Savings Account\n");
+    printf("  2. Current Account\n");
 
     while (1) {
-        printf("Choose option: ");
+        printf("Choose Option (1 or 2): ");
         if (!readLine(buffer, sizeof(buffer))) return;
 
         if (strcmp(buffer, "1") == 0) {
@@ -63,70 +66,72 @@ void createNewAccount(void) {
             break;
         }
         else {
-            printf("Invalid option. Please enter 1 or 2.\n");
+            printf("  Invalid option. Please enter 1 or 2.\n");
         }
     }
 
-    /* -----------------------------
-       ENTER PIN (4 digits)
-    ----------------------------- */
+    /* ======================================================
+       ENTER 4-DIGIT PIN
+       ====================================================== */
     while (1) {
-    char pinInput[50];  // <--- Bigger temporary buffer
+        char pinInput[50];
 
-    printf("Enter 4-digit PIN: ");
-    if (!readLine(pinInput, sizeof(pinInput)))
-        return;
+        printf("\nEnter 4-Digit PIN: ");
+        if (!readLine(pinInput, sizeof(pinInput)))
+            return;
 
-    // Check length EXACTLY 4
-    if (strlen(pinInput) != 4) {
-        printf("Invalid PIN. PIN must be exactly 4 digits.\n");
-        continue;
-    }
-
-    // Check every character is a digit
-    bool allDigits = true;
-    for (int i = 0; i < 4; i++) {
-        if (!isdigit((unsigned char)pinInput[i])) {
-            allDigits = false;
-            break;
+        if (strlen(pinInput) != 4) {
+            printf("  Invalid PIN. PIN must be exactly 4 digits.\n");
+            continue;
         }
+
+        bool allDigits = true;
+        for (int i = 0; i < 4; i++) {
+            if (!isdigit((unsigned char)pinInput[i])) {
+                allDigits = false;
+                break;
+            }
+        }
+
+        if (!allDigits) {
+            printf("  Invalid PIN. PIN must contain digits only.\n");
+            continue;
+        }
+
+        strcpy(new_account.pin, pinInput);
+        break;
     }
 
-    if (!allDigits) {
-        printf("Invalid PIN. Digits only.\n");
-        continue;
-    }
-
-    // PASS → copy into struct
-    strcpy(new_account.pin, pinInput);
-    break;
-  }
-
-    /* -----------------------------
+    /* ======================================================
        GENERATE ACCOUNT NUMBER
-    ----------------------------- */
+       ====================================================== */
     int account_num = generateAccountNumber();
     if (account_num == -1) {
-        printf("Failed to generate unique account number.\n");
+        printf("\nERROR: Failed to generate unique account number.\n");
         return;
     }
+
     snprintf(new_account.accountNumber,
-             sizeof(new_account.accountNumber), "%d", account_num);
+             sizeof(new_account.accountNumber),
+             "%d",
+             account_num);
 
     new_account.balance = 0.0;
 
-    /* -----------------------------
-       SAVE ACCOUNT
-    ----------------------------- */
+    /* ======================================================
+       SAVE ACCOUNT TO FILE
+       ====================================================== */
     if (!saveAccount(&new_account)) {
-        printf("Error saving account.\n");
+        printf("\nERROR: Failed to save account.\n");
         return;
     }
 
-    /* -----------------------------
-       PRINT SUCCESS MESSAGE
-    ----------------------------- */
-    printf("\nAccount created successfully!\n\n");  // one blank line after
+    /* ======================================================
+       DISPLAY SUCCESS CONFIRMATION
+       ====================================================== */
+    printf("\n===============================================\n");
+    printf("           ACCOUNT CREATED SUCCESSFULLY\n");
+    printf("===============================================\n\n");
 
     printf("Account Number : %s\n", new_account.accountNumber);
     printf("Name           : %s\n", new_account.name);

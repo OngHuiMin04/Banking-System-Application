@@ -5,12 +5,18 @@
 
 bool remitMoney(void);
 
+/* ==========================================================
+   TRANSFER / REMITTANCE FUNCTION
+   ========================================================== */
 bool remitMoney(void) {
-    printf("\n========== TRANSFER / REMITTANCE ==========\n");
 
-    /* ----------------------------------------
+    printf("\n===============================================\n");
+    printf("              TRANSFER / REMITTANCE            \n");
+    printf("===============================================\n");
+
+    /* ======================================================
        LOAD ACCOUNT LIST
-    ---------------------------------------- */
+       ====================================================== */
     char accounts[100][ACCOUNT_NUM_LEN];
     int count = loadAllAccounts(accounts);
 
@@ -19,10 +25,10 @@ bool remitMoney(void) {
         return false;
     }
 
-    /* ----------------------------------------
+    /* ======================================================
        SELECT SENDER ACCOUNT
-    ---------------------------------------- */
-    printf("\nChoose SENDER account:\n");
+       ====================================================== */
+    printf("\nSelect SENDER Account:\n");
     int senderIndex = showAccountSelection(accounts, count);
     if (senderIndex == -1) return false;
 
@@ -31,31 +37,32 @@ bool remitMoney(void) {
 
     BankAccount sender;
     if (!loadAccount(senderAcc, &sender)) {
-        printf("Error loading sender account.\n");
+        printf("Error: Could not load sender account.\n");
         return false;
     }
 
-    /* ----------------------------------------
+    /* ======================================================
        PIN VERIFICATION (SENDER)
-    ---------------------------------------- */
+       ====================================================== */
     char pinInput[50];
-    printf("Enter sender 4-digit PIN: ");
-    if (!readLine(pinInput, sizeof(pinInput)) || strcmp(pinInput, sender.pin) != 0) {
+    printf("\nEnter Sender 4-Digit PIN: ");
+    if (!readLine(pinInput, sizeof(pinInput)) ||
+        strcmp(pinInput, sender.pin) != 0) {
         printf("Incorrect PIN.\n");
         return false;
     }
 
-    printf("\nSender verified successfully.\n");
+    printf("\nSender verified.\n");
 
-    /* ----------------------------------------
+    /* ======================================================
        SELECT RECEIVER ACCOUNT
-    ---------------------------------------- */
-    printf("\nChoose RECEIVER account:\n");
+       ====================================================== */
+    printf("\nSelect RECEIVER Account:\n");
     int receiverIndex = showAccountSelection(accounts, count);
     if (receiverIndex == -1) return false;
 
     if (receiverIndex == senderIndex) {
-        printf("Cannot transfer to the SAME account.\n");
+        printf("Cannot transfer to the same account.\n");
         return false;
     }
 
@@ -64,25 +71,31 @@ bool remitMoney(void) {
 
     BankAccount receiver;
     if (!loadAccount(receiverAcc, &receiver)) {
-        printf("Error loading receiver account.\n");
+        printf("Error: Could not load receiver account.\n");
         return false;
     }
 
-    printf("\nFrom: %s (%s)\n", sender.accountNumber, sender.name);
-    printf("To  : %s (%s)\n", receiver.accountNumber, receiver.name);
+    printf("\n-----------------------------------------------\n");
+    printf("FROM : %s (%s)\n", sender.accountNumber, sender.name);
+    printf("TO   : %s (%s)\n", receiver.accountNumber, receiver.name);
+    printf("-----------------------------------------------\n");
 
-    /* ----------------------------------------
+    /* ======================================================
        ENTER TRANSFER AMOUNT
-    ---------------------------------------- */
+       ====================================================== */
     char amountStr[32];
-    double amount = 0.0, fee = 0.0, total = 0.0;
+    double amount = 0.0;
+    double fee = 0.0;
+    double total = 0.0;
 
     while (1) {
-        printf("\nEnter transfer amount (RM 0.01 - RM 50000.00): ");
+
+        printf("\nEnter Transfer Amount: ");
+
         if (!readLine(amountStr, sizeof(amountStr)))
             return false;
 
-        // Validate number formatting
+        /* VALIDATE NUMBER FORMAT */
         bool valid = true;
         int dots = 0;
 
@@ -98,40 +111,54 @@ bool remitMoney(void) {
         }
 
         if (!valid) {
-            printf("Invalid amount. Please enter numbers only.\n");
+            printf("Invalid amount. Digits only.\n");
             continue;
         }
 
         amount = atof(amountStr);
 
-        if (amount < 0.01 || amount > 50000.00) {
-            printf("Amount must be between RM 0.01 and RM 50000.00.\n");
+        /* ==================================================
+           INSUFFICIENT AMOUNT CHECK
+           (ANY amount > sender balance should fail)
+           ================================================== */
+        if (amount < 0.01 || amount > sender.balance) {
+            printf("Insufficient amount.\n");
+            printf("Your Balance: RM %.2f\n", sender.balance);
+            continue;
+        }
+
+        /* Internal safety against extreme inputs */
+        if (amount > 50000.00) {
+            printf("Insufficient amount.\n");
+            printf("Your Balance: RM %.2f\n", sender.balance);
             continue;
         }
 
         break;
     }
 
-    /* ----------------------------------------
+    /* ======================================================
        FEE CALCULATION RULES
-    ---------------------------------------- */
-    fee = 0.0;
-
+       ====================================================== */
     if (strcmp(sender.accountType, "Savings") == 0 &&
-        strcmp(receiver.accountType, "Current") == 0)
+        strcmp(receiver.accountType, "Current") == 0) {
         fee = amount * 0.02;
-
+    }
     else if (strcmp(sender.accountType, "Current") == 0 &&
-             strcmp(receiver.accountType, "Savings") == 0)
+             strcmp(receiver.accountType, "Savings") == 0) {
         fee = amount * 0.03;
+    }
+    else {
+        fee = 0.0;
+    }
 
     total = amount + fee;
 
-    /* ----------------------------------------
-       BALANCE CHECK
-    ---------------------------------------- */
+    /* ======================================================
+       BALANCE CHECK AFTER FEE
+       ====================================================== */
     if (total > sender.balance) {
-        printf("\nInsufficient funds.\n");
+        printf("\nInsufficient amount.\n");
         printf("Transfer Amount : RM %.2f\n", amount);
         printf("Fee             : RM %.2f\n", fee);
         printf("Total Required  : RM %.2f\n", total);
@@ -139,26 +166,29 @@ bool remitMoney(void) {
         return false;
     }
 
-    /* ----------------------------------------
+    /* ======================================================
        APPLY TRANSFER
-    ---------------------------------------- */
+       ====================================================== */
     sender.balance -= total;
     receiver.balance += amount;
 
     saveAccount(&sender);
     saveAccount(&receiver);
 
-    /* ----------------------------------------
-       DISPLAY RECEIPT
-    ---------------------------------------- */
-    printf("\n========== TRANSFER SUCCESSFUL ==========\n\n");
+    /* ======================================================
+       DISPLAY TRANSFER RECEIPT
+       ====================================================== */
+    printf("\n===============================================\n");
+    printf("                TRANSFER SUCCESSFUL            \n");
+    printf("===============================================\n\n");
+
     printf("Transferred To : %s (%s)\n", receiver.accountNumber, receiver.name);
     printf("Amount Sent    : RM %.2f\n", amount);
     printf("Fee Charged    : RM %.2f\n", fee);
-    printf("-----------------------------------------\n");
+    printf("-----------------------------------------------\n");
     printf("Sender New Balance : RM %.2f\n\n", sender.balance);
 
-    /* Log transactions */
+    /* LOG TRANSACTION */
     logTransaction("REMIT", senderAcc, amount, receiverAcc);
     if (fee > 0) logTransaction("REMIT_FEE", senderAcc, fee, "");
 
