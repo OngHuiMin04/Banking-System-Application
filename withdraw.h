@@ -3,88 +3,102 @@
 
 #include "common.h"
 
-/* -----------------------------------------------------
-   Function Prototype
------------------------------------------------------ */
 bool withdrawMoney(void);
 
-/* -----------------------------------------------------
-   Full Function Implementation
------------------------------------------------------ */
 bool withdrawMoney(void) {
-    printf("\n=== Withdraw Money ===\n");
+    printf("\n========== WITHDRAW MONEY ==========\n");
+
+    /* -----------------------------
+       SELECT ACCOUNT
+    ----------------------------- */
+    char accounts[100][ACCOUNT_NUM_LEN];
+    int count = loadAllAccounts(accounts);
+    int index = showAccountSelection(accounts, count);
+    if (index == -1) return false;
 
     char accountNumber[ACCOUNT_NUM_LEN];
-    char pin[PIN_LENGTH];
-    char amountStr[32];
-    double amount;
+    strcpy(accountNumber, accounts[index]);
 
-    // Get account number
-    printf("Enter account number: ");
-    if (!readLine(accountNumber, sizeof(accountNumber)) || strlen(accountNumber) == 0) {
-        printf("Invalid account number.\n");
-        return false;
-    }
-
-    // Get PIN
-    printf("Enter 4-digit PIN: ");
-    if (!readLine(pin, sizeof(pin)) || !validatePIN(pin)) {
-        printf("Invalid PIN format.\n");
-        return false;
-    }
-
-    // Load account
     BankAccount acc;
     if (!loadAccount(accountNumber, &acc)) {
         printf("Account not found.\n");
         return false;
     }
 
-    // PIN check
-    if (strcmp(acc.pin, pin) != 0) {
+    /* -----------------------------
+       PIN VERIFICATION
+    ----------------------------- */
+    char pinInput[50];
+    printf("Enter 4-digit PIN: ");
+    if (!readLine(pinInput, sizeof(pinInput)) || strcmp(pinInput, acc.pin) != 0) {
         printf("Incorrect PIN.\n");
         return false;
     }
 
-    printf("Current balance: RM %.2f\n", acc.balance);
+    /* -----------------------------
+       SHOW CURRENT BALANCE
+    ----------------------------- */
+    printf("\nCurrent Balance: RM %.2f\n", acc.balance);
 
-    // Amount input
+    /* -----------------------------
+       ENTER WITHDRAWAL AMOUNT
+    ----------------------------- */
+    char amountStr[32];
+    double amount = 0.0;
+
     while (1) {
-        printf("Enter amount to withdraw: ");
-        if (!readLine(amountStr, sizeof(amountStr))) return false;
+        printf("\nEnter amount to withdraw (RM 0.01 - RM 50000.00): ");
 
-        if (!isPositiveNumber(amountStr)) {
-            printf("Please enter numbers only.\n");
+        if (!readLine(amountStr, sizeof(amountStr)))
+            return false;
+
+        // Validate numeric format
+        bool validFormat = true;
+        int dots = 0;
+
+        for (int i = 0; amountStr[i] != '\0'; i++) {
+            if (amountStr[i] == '.') {
+                dots++;
+                if (dots > 1) { validFormat = false; break; }
+            } else if (!isdigit((unsigned char)amountStr[i])) {
+                validFormat = false;
+                break;
+            }
+        }
+
+        if (!validFormat) {
+            printf("Invalid input. Please enter a valid number.\n");
             continue;
         }
 
         amount = atof(amountStr);
 
-        if (!isValidAmount(amount)) {
-            printf("Amount must be RM 0.01 - RM 50,000.\n");
+        if (amount < 0.01 || amount > 50000.00) {
+            printf("Amount must be between RM 0.01 and RM 50000.00.\n");
             continue;
         }
 
         if (amount > acc.balance) {
-            printf("Insufficient funds (Balance: RM %.2f).\n", acc.balance);
-            return false;
+            printf("Insufficient funds. Your balance is RM %.2f.\n", acc.balance);
+            continue;
         }
+
         break;
     }
 
-    // Deduct amount
+    /* -----------------------------
+       UPDATE BALANCE
+    ----------------------------- */
     acc.balance -= amount;
+    saveAccount(&acc);
 
-    // Save changes
-    if (!saveAccount(&acc)) {
-        printf("Failed to update account file.\n");
-        return false;
-    }
+    /* -----------------------------
+       OUTPUT RESULT
+    ----------------------------- */
+    printf("\nWithdrawal successful!\n\n");
+    printf("New Balance: RM %.2f\n", acc.balance);
 
-    printf("Withdrawal successful! New balance: RM %.2f\n", acc.balance);
-
-    // Logging
-    logTransaction("WITHDRAWAL", acc.accountNumber, amount, "");
+    logTransaction("WITHDRAW", accountNumber, amount, "");
 
     return true;
 }
