@@ -11,7 +11,9 @@
 #include <errno.h>
 #include <limits.h>
 
-/* ------------------ CONSTANTS ------------------ */
+/* -------------------------------
+    CONSTANTS 
+-------------------------------- */
 #define DATABASE_DIR      "database"
 #define INDEX_FILE        "database/index.txt"
 #define TRANSACTION_LOG   "database/transaction.log"
@@ -22,17 +24,21 @@
 #define ACCTYPE_LEN       10
 #define PIN_LENGTH        5     // 4 digits + '\0'
 
-/* ------------------ STRUCT ------------------ */
+/* -------------------------------
+    STRUCT
+-------------------------------- */
 typedef struct {
     char accountNumber[ACCOUNT_NUM_LEN];
     char name[NAME_LEN];
     char id[ID_LEN];
     char accountType[ACCTYPE_LEN]; // "Savings" or "Current"
-    char pin[PIN_LENGTH];          // "1234"
+    char pin[PIN_LENGTH];
     double balance;
 } BankAccount;
 
-/* ------------------ FUNCTION PROTOTYPES ------------------ */
+/* -------------------------------
+    FUNCTION PROTOTYPES
+-------------------------------- */
 /* Input helpers */
 void clearInputBuffer(void);
 bool readLine(char *buffer, size_t size);
@@ -50,12 +56,13 @@ int  loadAllAccounts(char accounts[][ACCOUNT_NUM_LEN]);
 bool removeFromIndexFile(const char *target);
 
 /* Validation */
-bool validateName(const char *name);
-bool validateID(const char *id);
-bool validateAccountType(const char *input, char *outType);
 bool validatePIN(const char *pin);
 bool isPositiveNumber(const char *str);
 bool isValidAmount(double amount);
+
+/* Strict validation helpers */
+bool validateNameStrict(const char *name);
+bool validateIDStrict(const char *id);
 
 /* Account file operations */
 int  generateAccountNumber(void);
@@ -63,15 +70,16 @@ bool accountExists(const char *accountNumber);
 bool saveAccount(const BankAccount *acc);
 bool loadAccount(const char *accountNumber, BankAccount *acc);
 
-/* PIN verification */
-bool authenticateAccount(const char *accountNumber, const char *pin);
-
+/* Account selection menu */
+int  showAccountSelection(char accounts[][ACCOUNT_NUM_LEN], int count);
 
 /* ==========================================================
-   FULL IMPLEMENTATIONS (previously in common.c)
+   IMPLEMENTATIONS
    ========================================================== */
 
-/* ------------------ Input Helpers ------------------ */
+/* -------------------------------
+    Input Helpers
+-------------------------------- */
 void clearInputBuffer(void) {
     int c;
     while ((c = getchar()) != '\n' && c != EOF) {}
@@ -90,7 +98,9 @@ void getCurrentDateTime(char *buffer, int size) {
     strftime(buffer, size, "%Y-%m-%d %H:%M:%S", info);
 }
 
-/* ------------------ Logging ------------------ */
+/* -------------------------------
+    Logging
+-------------------------------- */
 void logTransaction(const char *action,
                     const char *account,
                     double amount,
@@ -115,7 +125,9 @@ void logTransaction(const char *action,
     fclose(fp);
 }
 
-/* ------------------ Index File ------------------ */
+/* -------------------------------
+    Index File 
+-------------------------------- */
 int countExistingAccounts(void) {
     FILE *fp = fopen(INDEX_FILE, "r");
     if (!fp) return 0;
@@ -171,45 +183,14 @@ bool removeFromIndexFile(const char *target) {
     return found;
 }
 
-/* ------------------ Validation ------------------ */
-bool validateName(const char *name) {
-    return (name && strlen(name) > 0);
-}
-
-bool validateID(const char *id) {
-    return (id && strlen(id) > 0);
-}
-
-bool validateAccountType(const char *input, char *outType) {
-    if (!input || !outType)
-        return false;
-
-    char lower[ACCTYPE_LEN];
-    strncpy(lower, input, ACCTYPE_LEN - 1);
-    lower[ACCTYPE_LEN - 1] = '\0';
-
-    for (int i = 0; lower[i]; i++)
-        lower[i] = (char)tolower(lower[i]);
-
-    if (strcmp(lower, "savings") == 0) {
-        strcpy(outType, "Savings");
-        return true;
-    }
-    if (strcmp(lower, "current") == 0) {
-        strcpy(outType, "Current");
-        return true;
-    }
-
-    return false;
-}
-
+/* -------------------------------
+    Validation 
+-------------------------------- */
 bool validatePIN(const char *pin) {
     if (!pin || strlen(pin) != 4)
         return false;
-
     for (int i = 0; i < 4; i++)
-        if (!isdigit(pin[i])) return false;
-
+        if (!isdigit((unsigned char)pin[i])) return false;
     return true;
 }
 
@@ -218,11 +199,10 @@ bool isPositiveNumber(const char *str) {
         return false;
 
     int dot = 0;
-
     for (int i = 0; str[i]; i++) {
         if (str[i] == '.') {
             if (++dot > 1) return false;
-        } else if (!isdigit(str[i])) {
+        } else if (!isdigit((unsigned char)str[i])) {
             return false;
         }
     }
@@ -234,7 +214,52 @@ bool isValidAmount(double amount) {
     return amount >= 0.01 && amount <= 50000.0;
 }
 
-/* ------------------ Account Files ------------------ */
+/* -------------------------------
+   Strict Validation: Name (letters + spaces only)
+-------------------------------- */
+bool validateNameStrict(const char *name) {
+    if (!name) return false;
+
+    size_t len = strlen(name);
+    if (len == 0) return false;
+
+    bool hasAlpha = false;
+
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)name[i];
+
+        if (isalpha(c)) {
+            hasAlpha = true;
+        } else if (c == ' ') {
+            continue;  // space allowed
+        } else {
+            return false;  // digits or symbols not allowed
+        }
+    }
+
+    return hasAlpha;  // must have at least one letter
+}
+
+/* -------------------------------
+    Strict Validation: ID (must be exactly 12 digits)
+-------------------------------- */
+bool validateIDStrict(const char *id) {
+    if (!id) return false;
+
+    size_t len = strlen(id);
+    if (len != 12) return false;
+
+    for (size_t i = 0; i < 12; i++) {
+        if (!isdigit((unsigned char)id[i]))
+            return false;
+    }
+
+    return true;
+}
+
+/* -------------------------------
+    Account Files 
+-------------------------------- */
 bool accountExists(const char *accountNumber) {
     char path[128];
     snprintf(path, sizeof(path), "%s/%s.txt", DATABASE_DIR, accountNumber);
@@ -250,7 +275,7 @@ bool accountExists(const char *accountNumber) {
 int generateAccountNumber(void) {
     for (int attempt = 0; attempt < 1000; attempt++) {
 
-        int digits = 7 + rand() % 3;
+        int digits = 7 + rand() % 3;  // 7–9 digits
 
         int min = 1;
         for (int i = 1; i < digits; i++)
@@ -264,7 +289,6 @@ int generateAccountNumber(void) {
         snprintf(buf, sizeof(buf), "%d", num);
 
         if (!accountExists(buf)) {
-
             FILE *idx = fopen(INDEX_FILE, "a");
             if (!idx) return -1;
 
@@ -279,8 +303,6 @@ int generateAccountNumber(void) {
 }
 
 bool saveAccount(const BankAccount *acc) {
-    if (!acc) return false;
-
     char path[128];
     snprintf(path, sizeof(path), "%s/%s.txt", DATABASE_DIR, acc->accountNumber);
 
@@ -300,8 +322,6 @@ bool saveAccount(const BankAccount *acc) {
 }
 
 bool loadAccount(const char *accountNumber, BankAccount *acc) {
-    if (!accountNumber || !acc) return false;
-
     char path[128];
     snprintf(path, sizeof(path), "%s/%s.txt", DATABASE_DIR, accountNumber);
 
@@ -329,21 +349,45 @@ bool loadAccount(const char *accountNumber, BankAccount *acc) {
     return true;
 }
 
-/* ------------------ PIN Verification ------------------ */
-bool authenticateAccount(const char *accountNumber, const char *pin) {
-    BankAccount acc;
-
-    if (!loadAccount(accountNumber, &acc)) {
-        printf("Account not found.\n");
-        return false;
+/* -------------------------------
+    ACCOUNT SELECTION MENU 
+-------------------------------- */
+int showAccountSelection(char accounts[][ACCOUNT_NUM_LEN], int count) {
+    if (count == 0) {
+        printf("No accounts available.\n");
+        return -1;
     }
 
-    if (strcmp(acc.pin, pin) != 0) {
-        printf("Incorrect PIN.\n");
-        return false;
+    printf("\n=== Available Accounts ===\n");
+    for (int i = 0; i < count; i++) {
+        BankAccount acc;
+        if (loadAccount(accounts[i], &acc)) {
+            printf("%d. %s  (%s)  - %s\n",
+                   i + 1,
+                   acc.accountNumber,
+                   acc.name,
+                   acc.accountType);
+        }
     }
 
-    return true;
+    char input[10];
+    int choice;
+
+    while (1) {
+        printf("Choose an account (1-%d): ", count);
+        if (!readLine(input, sizeof(input))) return -1;
+
+        if (!isPositiveNumber(input)) {
+            printf("Please enter a valid number.\n");
+            continue;
+        }
+
+        choice = atoi(input);
+        if (choice >= 1 && choice <= count)
+            return choice - 1;
+
+        printf("Invalid option.\n");
+    }
 }
 
-#endif 
+#endif
