@@ -173,13 +173,13 @@ All modules follow structured, testable, and maintainable programming practices.
 ##📌** 6. Documentation**
 A detailed instruction manual (PDF) is included in the repository.
 
-## 📌 **7. Author**
+## 📌 7. Author
 Ong Hui Min
 University of Southampton Malaysia
 BSc Computer Science (Year 1)
 
 GitHub: https://github.com/OngHuiMin04
 
-📌 8. License
+## 8. License
 This project is developed for COMP1312 Coursework.
 Please do not reuse or submit without permission.
