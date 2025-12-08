@@ -118,34 +118,30 @@ database/
 ├── index.txt
 └── transaction.log
 
-📌 4. File Structure
-📁 database/index.txt
+## 📌 4. File Structure
 
-Stores all existing account numbers
+### 📁 database/index.txt
+Stores all existing account numbers.  
 Used to prevent duplicate account creation.
 
-📁 database/transaction.log
+---
 
+### 📁 database/transaction.log
 Contains recorded actions:
 
-SESSION_START / SESSION_END
-
-CREATE_ACCOUNT
-
-DEPOSIT
-
-WITHDRAW
-
-REMIT / REMIT_FEE
-
-DELETE_ACCOUNT
+- SESSION_START / SESSION_END  
+- CREATE_ACCOUNT  
+- DEPOSIT  
+- WITHDRAW  
+- REMIT / REMIT_FEE  
+- DELETE_ACCOUNT  
 
 Each log line includes a timestamp.
 
-📁 database/<accountNumber>.txt
+---
 
+### 📁 database/<accountNumber>.txt
 Contains:
-
 Account Number
 Name
 ID
@@ -155,31 +151,37 @@ Balance
 
 Updated after every transaction.
 
-5. Project Structure
+## 📌 5. Project Structure
 /project
-│── common.h 
-│── menu.h 
-│── create_acc.h 
-│── deposit.h 
-│── withdraw.h 
-│── remittance.h 
-│── delete_acc.h 
+│── common.h
+│── menu.h
+│── create_acc.h
+│── deposit.h
+│── withdraw.h
+│── remittance.h
+│── delete_acc.h
 │── main.c
 └── database/
 
 
 All modules follow structured, testable, and maintainable programming practices.
 
-📌 6. Documentation
+---
+
+## 📌 6. Documentation
 A detailed instruction manual (PDF) is included in the repository.
 
-📌 7. Author
-Ong Hui Min
-University of Southampton Malaysia
+---
+
+## 📌 7. Author
+**Ong Hui Min**  
+University of Southampton Malaysia  
 BSc Computer Science (Year 1)
 
 GitHub: https://github.com/OngHuiMin04
 
-📌 8. License
-This project is developed for COMP1312 Coursework.
+---
+
+## 📌 8. License
+This project is developed for **COMP1312 Coursework**.  
 Please do not reuse or submit without permission.
