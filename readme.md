@@ -170,10 +170,10 @@ Updated after every transaction.
 
 All modules follow structured, testable, and maintainable programming practices.
 
-📌 6. Documentation
+##📌** 6. Documentation**
 A detailed instruction manual (PDF) is included in the repository.
 
-📌 7. Author
+## 📌 **7. Author**
 Ong Hui Min
 University of Southampton Malaysia
 BSc Computer Science (Year 1)
