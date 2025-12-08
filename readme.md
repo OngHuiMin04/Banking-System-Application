@@ -108,51 +108,55 @@ Shows number of active accounts and session timestamp.
 
 ### **Compile**
 ```bash
-gcc main.c -o banking  
-
-### **Run**
+gcc main.c -o banking
+Run
 .\banking
 
 The program auto-creates:
 database/
 ├── index.txt
 └── transaction.log
+```
+---
 
 ## 📌 4. File Structure
 
-### 📁 database/index.txt
-Stores all existing account numbers.  
-Used to prevent duplicate account creation.
+The banking system stores all data inside the **database** directory.  
+This ensures persistence across program executions.
+
+### **Files inside `database/`**
+
+- **index.txt**  
+  Stores all existing account numbers.  
+  Used to prevent duplicate account creation.
+
+- **transaction.log**  
+  Records all actions performed by the user:
+  - SESSION_START / SESSION_END  
+  - CREATE_ACCOUNT  
+  - DEPOSIT  
+  - WITHDRAW  
+  - REMIT / REMIT_FEE  
+  - DELETE_ACCOUNT  
+  Each entry includes a timestamp.
+
+- **<accountNumber>.txt**  
+  A unique file for each bank account, containing:  
+  - Account Number  
+  - Name  
+  - ID  
+  - Account Type  
+  - PIN  
+  - Balance  
+
+All account files are updated after every deposit, withdrawal, remittance, or deletion.
 
 ---
-
-### 📁 database/transaction.log
-Contains recorded actions:
-
-- SESSION_START / SESSION_END  
-- CREATE_ACCOUNT  
-- DEPOSIT  
-- WITHDRAW  
-- REMIT / REMIT_FEE  
-- DELETE_ACCOUNT  
-
-Each log line includes a timestamp.
-
----
-
-### 📁 database/<accountNumber>.txt
-Contains:
-Account Number
-Name
-ID
-Account Type
-PIN
-Balance
-
-Updated after every transaction.
 
 ## 📌 5. Project Structure
-/project
+
+The project follows a modular C programming design for clarity and maintainability.
+project/
 │── common.h
 │── menu.h
 │── create_acc.h
@@ -163,17 +167,19 @@ Updated after every transaction.
 │── main.c
 └── database/
 
-
-All modules follow structured, testable, and maintainable programming practices.
+Each module handles a specific banking operation, enabling clean separation of logic.
 
 ---
 
 ## 📌 6. Documentation
-A detailed instruction manual (PDF) is included in the repository.
+
+A fully detailed **Instruction Manual (PDF)** is included in the repository.  
+It explains every feature, validation rule, file structure, and system workflow.
 
 ---
 
 ## 📌 7. Author
+
 **Ong Hui Min**  
 University of Southampton Malaysia  
 BSc Computer Science (Year 1)
@@ -183,5 +189,6 @@ GitHub: https://github.com/OngHuiMin04
 ---
 
 ## 📌 8. License
+
 This project is developed for **COMP1312 Coursework**.  
 Please do not reuse or submit without permission.
