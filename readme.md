@@ -110,7 +110,7 @@ Shows number of active accounts and session timestamp.
 ```bash
 gcc main.c -o banking  
 
-Run
+### **Run**
 .\banking
 
 The program auto-creates:
