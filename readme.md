@@ -178,17 +178,31 @@ It explains every feature, validation rule, file structure, and system workflow.
 
 ---
 
+<<<<<<< HEAD
 ## 📌 7. Author
 
 **Ong Hui Min**  
 University of Southampton Malaysia  
+=======
+##📌** 6. Documentation**
+A detailed instruction manual (PDF) is included in the repository.
+
+## 📌 7. Author
+Ong Hui Min
+University of Southampton Malaysia
+>>>>>>> 754e1af4b9f29a263587f74353d3e0a807bf088d
 BSc Computer Science (Year 1)
 
 GitHub: https://github.com/OngHuiMin04
 
+<<<<<<< HEAD
 ---
 
 ## 📌 8. License
 
 This project is developed for **COMP1312 Coursework**.  
+=======
+## 8. License
+This project is developed for COMP1312 Coursework.
+>>>>>>> 754e1af4b9f29a263587f74353d3e0a807bf088d
 Please do not reuse or submit without permission.
